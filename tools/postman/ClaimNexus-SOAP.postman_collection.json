@@ -1,0 +1,808 @@
+{
+  "info": {
+    "name": "ClaimNexus SOAP | MongoDB, Neo4j and XML demo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run folders in order. SOAP requests use XML throughout. Imports use the original repository XML feeds and capture claim IDs automatically. Demo master records are synthetic. This collection adds demo records; it never deletes data. Repeated imports use stable transaction IDs and replay existing claims. API key is blank by default; set it locally if configured."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3100",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "autoClaimId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "healthClaimId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Connection and MongoDB models",
+      "item": [
+        {
+          "name": "Read WSDL XML contract",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/soap?wsdl"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('WSDL retrieved', () => pm.response.to.have.status(200));",
+                  "pm.test('Typed service contract', () => pm.expect(pm.response.text()).to.include('ClaimInput'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check both databases",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/GetHealth\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <GetHealth xmlns=\"urn:claimnexus\">\n\n    </GetHealth>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.GetHealthResponse;",
+                  "  pm.test('GetHealth response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  pm.test('MongoDB connected', () => pm.expect(data.mongodb).to.equal('CONNECTED'));",
+                  "pm.test('Neo4j connected', () => pm.expect(data.neo4j).to.equal('CONNECTED'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add demo master records",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/SeedDemo\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <SeedDemo xmlns=\"urn:claimnexus\">\n\n    </SeedDemo>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.SeedDemoResponse;",
+                  "  pm.test('SeedDemo response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  ",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show customers model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/ListCustomers\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListCustomers xmlns=\"urn:claimnexus\">\n\n    </ListCustomers>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.ListCustomersResponse;",
+                  "  pm.test('ListCustomers response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  ",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show policies model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/ListPolicies\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListPolicies xmlns=\"urn:claimnexus\">\n\n    </ListPolicies>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.ListPoliciesResponse;",
+                  "  pm.test('ListPolicies response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  ",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show providers and agents model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/ListProviders\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListProviders xmlns=\"urn:claimnexus\">\n\n    </ListProviders>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.ListProvidersResponse;",
+                  "  pm.test('ListProviders response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  ",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Partner XML intake",
+      "item": [
+        {
+          "name": "Import original AUTO XML batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/ImportClaimsXml\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ImportClaimsXml xmlns=\"urn:claimnexus\">\n      <xml>&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\r\n&lt;ClaimsBatch source=\"ACORD_GATEWAY_PARTNER\" generatedAt=\"2026-03-28T08:00:00Z\"&gt;\r\n  &lt;ACORDClaim&gt;\r\n    &lt;TransactionId&gt;XML-TX-AUTO-1001&lt;/TransactionId&gt;\r\n    &lt;PolicyRef&gt;POL-8101-TX&lt;/PolicyRef&gt;\r\n    &lt;InsuredRef&gt;CUST-XML-01&lt;/InsuredRef&gt;\r\n    &lt;LossType&gt;AUTO&lt;/LossType&gt;\r\n    &lt;LossDate&gt;2026-03-20&lt;/LossDate&gt;\r\n    &lt;NoticeAt&gt;2026-03-21&lt;/NoticeAt&gt;\r\n    &lt;TotalLossAmount&gt;8500.00&lt;/TotalLossAmount&gt;\r\n    &lt;Currency&gt;USD&lt;/Currency&gt;\r\n    &lt;LossNarrative&gt;Frontal bumper and radiator damage following low-speed urban collision.&lt;/LossNarrative&gt;\r\n    &lt;RepairFacilityId&gt;GARAGE-CENTRAL-01&lt;/RepairFacilityId&gt;\r\n    &lt;RepairFacilityName&gt;Central Metro Collision&lt;/RepairFacilityName&gt;\r\n    &lt;ProducerId&gt;AGENT-LONE-STAR&lt;/ProducerId&gt;\r\n    &lt;ProducerName&gt;Lone Star Underwriters&lt;/ProducerName&gt;\r\n    &lt;IncidentLocation&gt;1200 S Congress Ave&lt;/IncidentLocation&gt;\r\n    &lt;IncidentCity&gt;Austin&lt;/IncidentCity&gt;\r\n    &lt;IncidentState&gt;TX&lt;/IncidentState&gt;\r\n    &lt;InsuredZip&gt;78704&lt;/InsuredZip&gt;\r\n    &lt;AutoDetails&gt;\r\n      &lt;Vin&gt;1FTFW1ED4MFA19283&lt;/Vin&gt;\r\n      &lt;LicensePlate&gt;TX-448-ABC&lt;/LicensePlate&gt;\r\n      &lt;Make&gt;Ford&lt;/Make&gt;\r\n      &lt;Model&gt;F-150&lt;/Model&gt;\r\n      &lt;Year&gt;2023&lt;/Year&gt;\r\n      &lt;RepairCost&gt;8500.00&lt;/RepairCost&gt;\r\n      &lt;IsDrivable&gt;true&lt;/IsDrivable&gt;\r\n      &lt;HasPoliceReport&gt;true&lt;/HasPoliceReport&gt;\r\n    &lt;/AutoDetails&gt;\r\n  &lt;/ACORDClaim&gt;\r\n\r\n  &lt;ACORDClaim&gt;\r\n    &lt;TransactionId&gt;XML-TX-AUTO-1002&lt;/TransactionId&gt;\r\n    &lt;PolicyRef&gt;POL-8102-TX&lt;/PolicyRef&gt;\r\n    &lt;InsuredRef&gt;CUST-XML-02&lt;/InsuredRef&gt;\r\n    &lt;LossType&gt;AUTO&lt;/LossType&gt;\r\n    &lt;LossDate&gt;2026-03-22&lt;/LossDate&gt;\r\n    &lt;NoticeAt&gt;2026-03-22&lt;/NoticeAt&gt;\r\n    &lt;TotalLossAmount&gt;12800.00&lt;/TotalLossAmount&gt;\r\n    &lt;Currency&gt;USD&lt;/Currency&gt;\r\n    &lt;LossNarrative&gt;Side door and quarter panel crushing sustained in parking garage.&lt;/LossNarrative&gt;\r\n    &lt;RepairFacilityId&gt;GARAGE-CENTRAL-01&lt;/RepairFacilityId&gt;\r\n    &lt;RepairFacilityName&gt;Central Metro Collision&lt;/RepairFacilityName&gt;\r\n    &lt;ProducerId&gt;AGENT-LONE-STAR&lt;/ProducerId&gt;\r\n    &lt;ProducerName&gt;Lone Star Underwriters&lt;/ProducerName&gt;\r\n    &lt;IncidentLocation&gt;400 W 6th St&lt;/IncidentLocation&gt;\r\n    &lt;IncidentCity&gt;Austin&lt;/IncidentCity&gt;\r\n    &lt;IncidentState&gt;TX&lt;/IncidentState&gt;\r\n    &lt;InsuredZip&gt;78701&lt;/InsuredZip&gt;\r\n    &lt;AutoDetails&gt;\r\n      &lt;Vin&gt;4T1B11HK5JU819203&lt;/Vin&gt;\r\n      &lt;LicensePlate&gt;TX-991-ZXY&lt;/LicensePlate&gt;\r\n      &lt;Make&gt;Toyota&lt;/Make&gt;\r\n      &lt;Model&gt;Camry&lt;/Model&gt;\r\n      &lt;Year&gt;2021&lt;/Year&gt;\r\n      &lt;RepairCost&gt;12800.00&lt;/RepairCost&gt;\r\n      &lt;IsDrivable&gt;false&lt;/IsDrivable&gt;\r\n      &lt;HasPoliceReport&gt;false&lt;/HasPoliceReport&gt;\r\n    &lt;/AutoDetails&gt;\r\n  &lt;/ACORDClaim&gt;\r\n&lt;/ClaimsBatch&gt;\r\n</xml>\n    </ImportClaimsXml>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": "Two AUTO claims from the original partner_auto_batch.xml. Escaped XML is a string inside the SOAP xml parameter. PolicyRef, InsuredRef, TotalLossAmount and AutoDetails/Vin map to flat claim fields."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.ImportClaimsXmlResponse;",
+                  "  pm.test('ImportClaimsXml response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  const rows = Array.isArray(data.result) ? data.result : [data.result];",
+                  "  pm.test('All XML claims accepted', () => pm.expect(Number(data.accepted)).to.equal(2));",
+                  "  pm.test('Claim ID returned', () => pm.expect(rows[0].id).to.match(/^CLM-/));",
+                  "  if (rows[0].id) pm.collectionVariables.set('autoClaimId', rows[0].id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import original HEALTH XML feed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/ImportClaimsXml\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ImportClaimsXml xmlns=\"urn:claimnexus\">\n      <xml>&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\r\n&lt;ClaimsBatch source=\"HEALTH_HL7_XML_GATEWAY\" generatedAt=\"2026-03-28T09:30:00Z\"&gt;\r\n  &lt;InsuranceClaim&gt;\r\n    &lt;TransactionId&gt;XML-TX-HEALTH-2001&lt;/TransactionId&gt;\r\n    &lt;PolicyRef&gt;POL-HEALTH-301&lt;/PolicyRef&gt;\r\n    &lt;InsuredRef&gt;CUST-HLTH-88&lt;/InsuredRef&gt;\r\n    &lt;LossType&gt;HEALTH&lt;/LossType&gt;\r\n    &lt;LossDate&gt;2026-03-24&lt;/LossDate&gt;\r\n    &lt;NoticeAt&gt;2026-03-25&lt;/NoticeAt&gt;\r\n    &lt;TotalLossAmount&gt;6400.00&lt;/TotalLossAmount&gt;\r\n    &lt;Currency&gt;USD&lt;/Currency&gt;\r\n    &lt;LossNarrative&gt;Emergency medical consultation and outpatient radiological diagnostics.&lt;/LossNarrative&gt;\r\n    &lt;FacilityId&gt;HOSP-STDAVIDS-01&lt;/FacilityId&gt;\r\n    &lt;FacilityName&gt;St. David's Medical Center&lt;/FacilityName&gt;\r\n    &lt;ProducerId&gt;AGENT-AUSTIN-LIFE&lt;/ProducerId&gt;\r\n    &lt;ProducerName&gt;Austin Life and Health Brokers&lt;/ProducerName&gt;\r\n    &lt;IncidentLocation&gt;919 E 32nd St&lt;/IncidentLocation&gt;\r\n    &lt;IncidentCity&gt;Austin&lt;/IncidentCity&gt;\r\n    &lt;IncidentState&gt;TX&lt;/IncidentState&gt;\r\n    &lt;InsuredZip&gt;78705&lt;/InsuredZip&gt;\r\n    &lt;HealthDetails&gt;\r\n      &lt;DiagnosisCodes&gt;S13.4XXA, M54.2&lt;/DiagnosisCodes&gt;\r\n      &lt;ProcedureCodes&gt;99284, 72040, 72125&lt;/ProcedureCodes&gt;\r\n    &lt;/HealthDetails&gt;\r\n  &lt;/InsuranceClaim&gt;\r\n&lt;/ClaimsBatch&gt;\r\n</xml>\n    </ImportClaimsXml>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": "One HEALTH claim from the original hospital_billing_feed.xml. DiagnosisCodes and ProcedureCodes are retained as strings."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.ImportClaimsXmlResponse;",
+                  "  pm.test('ImportClaimsXml response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  const rows = Array.isArray(data.result) ? data.result : [data.result];",
+                  "  pm.test('All XML claims accepted', () => pm.expect(Number(data.accepted)).to.equal(1));",
+                  "  pm.test('Claim ID returned', () => pm.expect(rows[0].id).to.match(/^CLM-/));",
+                  "  if (rows[0].id) pm.collectionVariables.set('healthClaimId', rows[0].id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inspect imported AUTO claim and audit events",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/GetClaim\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <GetClaim xmlns=\"urn:claimnexus\">\n      <id>{{autoClaimId}}</id>\n    </GetClaim>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.GetClaimResponse;",
+                  "  pm.test('GetClaim response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  pm.test('Graph synchronized', () => pm.expect(data.claim.graphSync).to.equal('SYNCED'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inspect imported HEALTH claim and audit events",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/GetClaim\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <GetClaim xmlns=\"urn:claimnexus\">\n      <id>{{healthClaimId}}</id>\n    </GetClaim>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.GetClaimResponse;",
+                  "  pm.test('GetClaim response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  pm.test('Graph synchronized', () => pm.expect(data.claim.graphSync).to.equal('SYNCED'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show stored claims",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/ListClaims\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ListClaims xmlns=\"urn:claimnexus\">\n      <limit>50</limit>\n      <offset>0</offset>\n    </ListClaims>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.ListClaimsResponse;",
+                  "  pm.test('ListClaims response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  ",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. MongoDB to Neo4j integration",
+      "item": [
+        {
+          "name": "Find claims sharing the AUTO garage or agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/GetRelatedClaims\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <GetRelatedClaims xmlns=\"urn:claimnexus\">\n      <id>{{autoClaimId}}</id>\n    </GetRelatedClaims>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": "Neo4j finds connected claim IDs. The server then loads current statuses and amounts from MongoDB. The two partner AUTO claims share GARAGE-CENTRAL-01 and AGENT-LONE-STAR."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.GetRelatedClaimsResponse;",
+                  "  pm.test('GetRelatedClaims response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  pm.test('Shared relationships found', () => pm.expect(data.related).to.exist);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retry pending graph projections",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/RetryGraphSync\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <RetryGraphSync xmlns=\"urn:claimnexus\">\n      <limit>100</limit>\n    </RetryGraphSync>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.RetryGraphSyncResponse;",
+                  "  pm.test('RetryGraphSync response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  ",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replay the AUTO XML batch without creating new claims",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              },
+              {
+                "key": "SOAPAction",
+                "value": "\"urn:claimnexus/ImportClaimsXml\""
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <ImportClaimsXml xmlns=\"urn:claimnexus\">\n      <xml>&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\r\n&lt;ClaimsBatch source=\"ACORD_GATEWAY_PARTNER\" generatedAt=\"2026-03-28T08:00:00Z\"&gt;\r\n  &lt;ACORDClaim&gt;\r\n    &lt;TransactionId&gt;XML-TX-AUTO-1001&lt;/TransactionId&gt;\r\n    &lt;PolicyRef&gt;POL-8101-TX&lt;/PolicyRef&gt;\r\n    &lt;InsuredRef&gt;CUST-XML-01&lt;/InsuredRef&gt;\r\n    &lt;LossType&gt;AUTO&lt;/LossType&gt;\r\n    &lt;LossDate&gt;2026-03-20&lt;/LossDate&gt;\r\n    &lt;NoticeAt&gt;2026-03-21&lt;/NoticeAt&gt;\r\n    &lt;TotalLossAmount&gt;8500.00&lt;/TotalLossAmount&gt;\r\n    &lt;Currency&gt;USD&lt;/Currency&gt;\r\n    &lt;LossNarrative&gt;Frontal bumper and radiator damage following low-speed urban collision.&lt;/LossNarrative&gt;\r\n    &lt;RepairFacilityId&gt;GARAGE-CENTRAL-01&lt;/RepairFacilityId&gt;\r\n    &lt;RepairFacilityName&gt;Central Metro Collision&lt;/RepairFacilityName&gt;\r\n    &lt;ProducerId&gt;AGENT-LONE-STAR&lt;/ProducerId&gt;\r\n    &lt;ProducerName&gt;Lone Star Underwriters&lt;/ProducerName&gt;\r\n    &lt;IncidentLocation&gt;1200 S Congress Ave&lt;/IncidentLocation&gt;\r\n    &lt;IncidentCity&gt;Austin&lt;/IncidentCity&gt;\r\n    &lt;IncidentState&gt;TX&lt;/IncidentState&gt;\r\n    &lt;InsuredZip&gt;78704&lt;/InsuredZip&gt;\r\n    &lt;AutoDetails&gt;\r\n      &lt;Vin&gt;1FTFW1ED4MFA19283&lt;/Vin&gt;\r\n      &lt;LicensePlate&gt;TX-448-ABC&lt;/LicensePlate&gt;\r\n      &lt;Make&gt;Ford&lt;/Make&gt;\r\n      &lt;Model&gt;F-150&lt;/Model&gt;\r\n      &lt;Year&gt;2023&lt;/Year&gt;\r\n      &lt;RepairCost&gt;8500.00&lt;/RepairCost&gt;\r\n      &lt;IsDrivable&gt;true&lt;/IsDrivable&gt;\r\n      &lt;HasPoliceReport&gt;true&lt;/HasPoliceReport&gt;\r\n    &lt;/AutoDetails&gt;\r\n  &lt;/ACORDClaim&gt;\r\n\r\n  &lt;ACORDClaim&gt;\r\n    &lt;TransactionId&gt;XML-TX-AUTO-1002&lt;/TransactionId&gt;\r\n    &lt;PolicyRef&gt;POL-8102-TX&lt;/PolicyRef&gt;\r\n    &lt;InsuredRef&gt;CUST-XML-02&lt;/InsuredRef&gt;\r\n    &lt;LossType&gt;AUTO&lt;/LossType&gt;\r\n    &lt;LossDate&gt;2026-03-22&lt;/LossDate&gt;\r\n    &lt;NoticeAt&gt;2026-03-22&lt;/NoticeAt&gt;\r\n    &lt;TotalLossAmount&gt;12800.00&lt;/TotalLossAmount&gt;\r\n    &lt;Currency&gt;USD&lt;/Currency&gt;\r\n    &lt;LossNarrative&gt;Side door and quarter panel crushing sustained in parking garage.&lt;/LossNarrative&gt;\r\n    &lt;RepairFacilityId&gt;GARAGE-CENTRAL-01&lt;/RepairFacilityId&gt;\r\n    &lt;RepairFacilityName&gt;Central Metro Collision&lt;/RepairFacilityName&gt;\r\n    &lt;ProducerId&gt;AGENT-LONE-STAR&lt;/ProducerId&gt;\r\n    &lt;ProducerName&gt;Lone Star Underwriters&lt;/ProducerName&gt;\r\n    &lt;IncidentLocation&gt;400 W 6th St&lt;/IncidentLocation&gt;\r\n    &lt;IncidentCity&gt;Austin&lt;/IncidentCity&gt;\r\n    &lt;IncidentState&gt;TX&lt;/IncidentState&gt;\r\n    &lt;InsuredZip&gt;78701&lt;/InsuredZip&gt;\r\n    &lt;AutoDetails&gt;\r\n      &lt;Vin&gt;4T1B11HK5JU819203&lt;/Vin&gt;\r\n      &lt;LicensePlate&gt;TX-991-ZXY&lt;/LicensePlate&gt;\r\n      &lt;Make&gt;Toyota&lt;/Make&gt;\r\n      &lt;Model&gt;Camry&lt;/Model&gt;\r\n      &lt;Year&gt;2021&lt;/Year&gt;\r\n      &lt;RepairCost&gt;12800.00&lt;/RepairCost&gt;\r\n      &lt;IsDrivable&gt;false&lt;/IsDrivable&gt;\r\n      &lt;HasPoliceReport&gt;false&lt;/HasPoliceReport&gt;\r\n    &lt;/AutoDetails&gt;\r\n  &lt;/ACORDClaim&gt;\r\n&lt;/ClaimsBatch&gt;\r\n</xml>\n    </ImportClaimsXml>\n  </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/soap",
+            "description": "TransactionId becomes idempotencyKey. Replaying unchanged partner XML returns the same claim IDs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const xml2js = require('xml2js');",
+                  "xml2js.parseString(pm.response.text(), {",
+                  "  explicitArray: false,",
+                  "  tagNameProcessors: [xml2js.processors.stripPrefix]",
+                  "}, (error, parsed) => {",
+                  "  pm.test('Valid SOAP response', () => pm.expect(error).to.equal(null));",
+                  "  if (error) return;",
+                  "  const body = parsed.Envelope.Body;",
+                  "  pm.test('No SOAP fault', () => pm.expect(body.Fault).to.equal(undefined));",
+                  "  const data = body.ImportClaimsXmlResponse;",
+                  "  pm.test('ImportClaimsXml response exists', () => pm.expect(data).to.exist);",
+                  "  if (!data) return;",
+                  "  const rows = Array.isArray(data.result) ? data.result : [data.result];",
+                  "  pm.test('Same first claim ID', () => pm.expect(rows[0].id).to.equal(pm.collectionVariables.get('autoClaimId')));",
+                  "  pm.test('Idempotent replay recorded', () => pm.expect(rows[0].message).to.equal('Idempotent replay'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
