@@ -8,7 +8,7 @@ The checked-in [Render Blueprint](../render.yaml) selects the free web-service p
 
 1. Sign in at [MongoDB Atlas](https://cloud.mongodb.com/). Create a separate project named `ClaimNexus` and select **Free / M0** for a cluster named `claimnexus`. Choose Singapore if the selected provider offers it; otherwise choose the closest available free region. Do not select Flex or a paid dedicated tier.
 2. Create a database user named `claimnexus_app` with a generated password. Grant `readWrite` on the `claimnexus_express` database. Keep the password in your password manager. In **Connect → Drivers**, copy the Node.js `mongodb+srv://` URI and replace the password placeholder with the URL-encoded password. This cluster supports the application's MongoDB transactions; do not replace it with a standalone MongoDB server.
-3. Sign in at [Neo4j Aura](https://console.neo4j.io/). Create **AuraDB Free**, named `ClaimNexus`, and save the generated credentials file. Wait for the instance to become available. Use its `neo4j+s://…databases.neo4j.io` URI, username `neo4j`, generated password and database `neo4j`. Keep TLS certificate verification enabled.
+3. Sign in at [Neo4j Aura](https://console.neo4j.io/). Create **AuraDB Free**, named `ClaimNexus`, and save the generated credentials file. Wait for the instance to become available. Use its `neo4j+s://…databases.neo4j.io` URI and the exact `NEO4J_USERNAME`, `NEO4J_PASSWORD` and `NEO4J_DATABASE` values from that file. New free instances can have instance-specific usernames and database names rather than `neo4j`. Keep TLS certificate verification enabled.
 
 Use fresh databases for this deployment. Startup creates MongoDB indexes and checks Neo4j connectivity; claim ingestion creates graph uniqueness constraints. Local databases are not copied or exposed by deploying the app. Add demo data after deployment through SOAP or the dashboard.
 
@@ -22,9 +22,11 @@ Fill the prompted secret values directly in Render:
 | --- | --- |
 | `MONGODB_URI` | Atlas SRV connection URI with the database user's encoded password |
 | `NEO4J_URI` | Aura encrypted `neo4j+s://` URI |
+| `NEO4J_USERNAME` | Exact username from the Aura credentials file |
 | `NEO4J_PASSWORD` | Aura's generated database password |
+| `NEO4J_DATABASE` | Exact database name from the Aura credentials file |
 
-The Blueprint sets `MONGODB_DB_NAME=claimnexus_express`, `NEO4J_USERNAME=neo4j`, `NEO4J_DATABASE=neo4j`, `HOST=0.0.0.0`, `PORT=10000` and `NODE_ENV=production`. Render generates a random 256-bit `SOAP_API_KEY`. Do not copy local `.env` defaults into Render.
+The Blueprint sets `MONGODB_DB_NAME=claimnexus_express`, `HOST=0.0.0.0`, `PORT=10000` and `NODE_ENV=production`. Render generates a random 256-bit `SOAP_API_KEY`. Do not copy local `.env` defaults into Render.
 
 Atlas accepts connections only from its configured network access list. Once the Render service exists, open **Connect → Outbound** and add all listed CIDR ranges to the Atlas project's **Network Access** list. Render's outbound ranges are shared by services in the selected region, so a strong, scoped database credential remains necessary. Avoid allowing `0.0.0.0/0`. If the first deploy fails before this setup is finished, redeploy after adding the ranges.
 
