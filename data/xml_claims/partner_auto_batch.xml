@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ClaimsBatch source="ACORD_GATEWAY_PARTNER" generatedAt="2026-03-28T08:00:00Z">
+  <ACORDClaim>
+    <TransactionId>XML-TX-AUTO-1001</TransactionId>
+    <PolicyRef>POL-8101-TX</PolicyRef>
+    <InsuredRef>CUST-XML-01</InsuredRef>
+    <LossType>AUTO</LossType>
+    <LossDate>2026-03-20</LossDate>
+    <NoticeAt>2026-03-21</NoticeAt>
+    <TotalLossAmount>8500.00</TotalLossAmount>
+    <Currency>USD</Currency>
+    <LossNarrative>Frontal bumper and radiator damage following low-speed urban collision.</LossNarrative>
+    <RepairFacilityId>GARAGE-CENTRAL-01</RepairFacilityId>
+    <RepairFacilityName>Central Metro Collision</RepairFacilityName>
+    <ProducerId>AGENT-LONE-STAR</ProducerId>
+    <ProducerName>Lone Star Underwriters</ProducerName>
+    <IncidentLocation>1200 S Congress Ave</IncidentLocation>
+    <IncidentCity>Austin</IncidentCity>
+    <IncidentState>TX</IncidentState>
+    <InsuredZip>78704</InsuredZip>
+    <AutoDetails>
+      <Vin>1FTFW1ED4MFA19283</Vin>
+      <LicensePlate>TX-448-ABC</LicensePlate>
+      <Make>Ford</Make>
+      <Model>F-150</Model>
+      <Year>2023</Year>
+      <RepairCost>8500.00</RepairCost>
+      <IsDrivable>true</IsDrivable>
+      <HasPoliceReport>true</HasPoliceReport>
+    </AutoDetails>
+  </ACORDClaim>
+
+  <ACORDClaim>
+    <TransactionId>XML-TX-AUTO-1002</TransactionId>
+    <PolicyRef>POL-8102-TX</PolicyRef>
+    <InsuredRef>CUST-XML-02</InsuredRef>
+    <LossType>AUTO</LossType>
+    <LossDate>2026-03-22</LossDate>
+    <NoticeAt>2026-03-22</NoticeAt>
+    <TotalLossAmount>12800.00</TotalLossAmount>
+    <Currency>USD</Currency>
+    <LossNarrative>Side door and quarter panel crushing sustained in parking garage.</LossNarrative>
+    <RepairFacilityId>GARAGE-CENTRAL-01</RepairFacilityId>
+    <RepairFacilityName>Central Metro Collision</RepairFacilityName>
+    <ProducerId>AGENT-LONE-STAR</ProducerId>
+    <ProducerName>Lone Star Underwriters</ProducerName>
+    <IncidentLocation>400 W 6th St</IncidentLocation>
+    <IncidentCity>Austin</IncidentCity>
+    <IncidentState>TX</IncidentState>
+    <InsuredZip>78701</InsuredZip>
+    <AutoDetails>
+      <Vin>4T1B11HK5JU819203</Vin>
+      <LicensePlate>TX-991-ZXY</LicensePlate>
+      <Make>Toyota</Make>
+      <Model>Camry</Model>
+      <Year>2021</Year>
+      <RepairCost>12800.00</RepairCost>
+      <IsDrivable>false</IsDrivable>
+      <HasPoliceReport>false</HasPoliceReport>
+    </AutoDetails>
+  </ACORDClaim>
+</ClaimsBatch>

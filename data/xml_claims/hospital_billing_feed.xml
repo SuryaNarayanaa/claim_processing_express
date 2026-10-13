@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ClaimsBatch source="HEALTH_HL7_XML_GATEWAY" generatedAt="2026-03-28T09:30:00Z">
+  <InsuranceClaim>
+    <TransactionId>XML-TX-HEALTH-2001</TransactionId>
+    <PolicyRef>POL-HEALTH-301</PolicyRef>
+    <InsuredRef>CUST-HLTH-88</InsuredRef>
+    <LossType>HEALTH</LossType>
+    <LossDate>2026-03-24</LossDate>
+    <NoticeAt>2026-03-25</NoticeAt>
+    <TotalLossAmount>6400.00</TotalLossAmount>
+    <Currency>USD</Currency>
+    <LossNarrative>Emergency medical consultation and outpatient radiological diagnostics.</LossNarrative>
+    <FacilityId>HOSP-STDAVIDS-01</FacilityId>
+    <FacilityName>St. David's Medical Center</FacilityName>
+    <ProducerId>AGENT-AUSTIN-LIFE</ProducerId>
+    <ProducerName>Austin Life and Health Brokers</ProducerName>
+    <IncidentLocation>919 E 32nd St</IncidentLocation>
+    <IncidentCity>Austin</IncidentCity>
+    <IncidentState>TX</IncidentState>
+    <InsuredZip>78705</InsuredZip>
+    <HealthDetails>
+      <DiagnosisCodes>S13.4XXA, M54.2</DiagnosisCodes>
+      <ProcedureCodes>99284, 72040, 72125</ProcedureCodes>
+    </HealthDetails>
+  </InsuranceClaim>
+</ClaimsBatch>

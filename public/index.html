@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ClaimNexus | Claims workspace</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <a class="brand" href="/">ClaimNexus</a
+        ><span class="subtitle">Claims workspace</span>
+      </div>
+      <div class="header-actions">
+        <a href="/soap?wsdl" target="_blank" rel="noopener">Service contract</a
+        ><button id="refresh">Refresh</button>
+      </div>
+    </header>
+    <main>
+      <div class="heading">
+        <div>
+          <h1>Claims ledger</h1>
+          <p>
+            Validate coverage, inspect claim history and review shared
+            relationships.
+          </p>
+        </div>
+        <button id="new" class="primary">Submit a claim</button>
+      </div>
+      <div class="connection">
+        <span id="health">Checking databases…</span>
+        <details>
+          <summary>Connection key</summary>
+          <label
+            >API key
+            <input
+              id="key"
+              type="password"
+              autocomplete="off"
+              placeholder="Only if configured" /></label
+          ><button id="connect">Connect</button>
+        </details>
+      </div>
+      <p id="feedback" role="status" aria-live="polite"></p>
+      <div id="summary" class="summary" aria-label="Claim counts"></div>
+      <section class="tools" aria-label="Data tools">
+        <div>
+          <h2>Data operations</h2>
+          <p>
+            Demo streams are synthetic. Relationship indicators need human
+            review.
+          </p>
+        </div>
+        <div class="actions">
+          <button id="seed">Add demo data</button
+          ><button id="stream">Stream 20 demo claims</button
+          ><button id="analytics">Run analytics</button
+          ><button id="export">Export Parquet</button
+          ><button id="retry">Retry graph sync</button
+          ><button id="import-toggle">Import data</button
+          ><button id="master-toggle">Add master records</button>
+        </div>
+        <p id="jobs"></p>
+      </section>
+      <section id="import-panel" hidden>
+        <h2>Import claims</h2>
+        <p>
+          Upload a partner XML feed or a JSON array of flat claims. Master
+          records must exist first.
+        </p>
+        <label
+          >XML or JSON file
+          <input id="import-file" type="file" accept=".xml,.json" /></label
+        ><label
+          >Partner XML
+          <textarea
+            id="xml"
+            rows="7"
+            placeholder="&lt;ClaimsBatch&gt;…&lt;/ClaimsBatch&gt;"
+          ></textarea></label
+        ><button id="import-xml" class="primary">Import XML</button>
+        <pre id="import-results"></pre>
+      </section>
+      <section id="master-panel" hidden>
+        <h2>Add master records</h2>
+        <p>
+          Create a customer, then their policy. Providers include garages,
+          hospitals and agents.
+        </p>
+        <label
+          >Record type
+          <select id="master-type">
+            <option value="Customer">Customer</option>
+            <option value="Policy">Policy</option>
+            <option value="Provider">Provider</option>
+          </select></label
+        >
+        <form id="master-form">
+          <div id="master-fields" class="form-grid"></div>
+          <button class="primary">Create record</button>
+        </form>
+      </section>
+      <section id="claim-panel" hidden>
+        <h2>Submit a claim</h2>
+        <form id="claim-form">
+          <div class="form-grid">
+            <label
+              >Policy
+              <select id="policy" name="policyId" required></select></label
+            ><label
+              >Claim type
+              <select name="type" id="claim-type">
+                <option>AUTO</option>
+                <option>HEALTH</option>
+                <option>PROPERTY</option>
+              </select></label
+            ><label
+              >Customer ID
+              <input name="customerId" id="customer" required /></label
+            ><label
+              >Incident date
+              <input
+                name="incidentDate"
+                type="datetime-local"
+                required /></label
+            ><label
+              >Claim amount
+              <input
+                name="amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                required /></label
+            ><label
+              >Currency
+              <input
+                name="currency"
+                id="currency"
+                pattern="[A-Z]{3}"
+                maxlength="3"
+                value="USD"
+                required /></label
+            ><label>Asset ID <input name="assetId" id="asset" /></label
+            ><label
+              >Provider
+              <select name="providerId" id="provider">
+                <option value="">None</option>
+              </select></label
+            ><label
+              >Agent
+              <select name="agentId" id="agent">
+                <option value="">None</option>
+              </select></label
+            ><label>Location <input name="location" /></label
+            ><label>Diagnosis codes <input name="diagnosisCodes" /></label
+            ><label>Procedure codes <input name="procedureCodes" /></label
+            ><label class="wide"
+              >Description
+              <textarea
+                name="description"
+                rows="3"
+                minlength="5"
+                required
+              ></textarea>
+            </label>
+          </div>
+          <div class="actions">
+            <button class="primary">Submit claim</button
+            ><button type="button" id="cancel">Cancel</button>
+          </div>
+        </form>
+      </section>
+      <section class="ledger">
+        <div class="filters">
+          <h2>Operational claims</h2>
+          <label
+            >Status
+            <select id="status">
+              <option value="ALL">All statuses</option>
+              <option>READY_FOR_ANALYSIS</option>
+              <option>INVALID</option>
+              <option>UNDER_REVIEW</option>
+              <option>INVESTIGATION_CANDIDATE</option>
+              <option>APPROVED</option>
+              <option>REJECTED</option>
+              <option>SETTLED</option>
+            </select></label
+          ><label
+            >Type
+            <select id="type">
+              <option value="ALL">All types</option>
+              <option>AUTO</option>
+              <option>HEALTH</option>
+              <option>PROPERTY</option>
+            </select></label
+          >
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Claim / policy</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Graph</th>
+                <th>Incident</th>
+                <th>Review</th>
+              </tr>
+            </thead>
+            <tbody id="claims">
+              <tr>
+                <td colspan="7">Loading claims…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="record-count"></span><button id="previous">Previous</button
+          ><button id="next">Next</button>
+        </div>
+      </section>
+      <section id="detail" hidden tabindex="-1">
+        <div class="detail-heading">
+          <h2>Claim inspection</h2>
+          <button id="close-detail">Close</button>
+        </div>
+        <div id="detail-content"></div>
+        <form id="status-form">
+          <label
+            >Next status
+            <select id="next-status"></select></label
+          ><label>Review note <input id="review-note" maxlength="2000" /></label
+          ><button class="primary">Update status</button>
+        </form>
+        <button id="related">Find shared relationships</button>
+        <div id="related-results"></div>
+        <h3>Audit history</h3>
+        <ol id="events"></ol>
+      </section>
+    </main>
+    <footer>
+      ClaimNexus · MongoDB operational records · Neo4j relationships
+    </footer>
+  </body>
+</html>
