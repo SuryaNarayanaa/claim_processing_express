@@ -10,6 +10,7 @@ import { makeWsdl, operations, contractOutput } from "./contract.js";
 import { parseClaimsXml } from "./xml.js";
 import { seedDemo } from "./seed.js";
 import { DomainError, limitValue, requireId } from "./domain.js";
+import { soapEndpoint } from "./runtime.js";
 
 export const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -72,6 +73,17 @@ export async function createApp(ctx, env = process.env) {
     );
     next();
   });
+  // Operational readiness only. Business operations stay on the authenticated SOAP service.
+  // Neo4j outages are handled by the durable projection retry queue, not process restarts.
+  app.get("/healthz", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      await ctx.db.command({ ping: 1 }, { timeoutMS: 2000 });
+      res.type("text").send("ok");
+    } catch {
+      res.status(503).type("text").send("unavailable");
+    }
+  });
   app.use(
     "/soap",
     (req, res, next) => {
@@ -133,8 +145,7 @@ export async function createApp(ctx, env = process.env) {
       },
     ]),
   );
-  const endpoint =
-    env.SOAP_PUBLIC_URL || `http://127.0.0.1:${env.PORT || 3100}/soap`;
+  const endpoint = soapEndpoint(env);
   await new Promise((resolve, reject) =>
     soap.listen(app, {
       path: "/soap",

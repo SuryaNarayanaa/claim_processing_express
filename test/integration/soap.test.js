@@ -291,6 +291,26 @@ test(
       },
     );
     await t.test(
+      "Render readiness is public, contains no database details and reports MongoDB failure",
+      async () => {
+        const url = endpoint.replace("/soap", "/healthz");
+        const healthy = await fetch(url);
+        assert.equal(healthy.status, 200);
+        assert.equal(await healthy.text(), "ok");
+        assert.equal(healthy.headers.get("cache-control"), "no-store");
+        const command = ctx.db.command;
+        ctx.db.command = async () => { throw new Error("fixture database failure"); };
+        try {
+          const unavailable = await fetch(url);
+          assert.equal(unavailable.status, 503);
+          assert.equal(await unavailable.text(), "unavailable");
+        } finally {
+          ctx.db.command = command;
+        }
+        assert.equal((await fetch(`${endpoint}?wsdl`)).status, 401);
+      },
+    );
+    await t.test(
       "SOAP faults for auth, oversized XML, DTD and removed REST paths",
       async () => {
         assert.equal(

@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: claimnexus-express
+    runtime: docker
+    plan: free
+    region: singapore
+    repo: https://github.com/SuryaNarayanaa/claim_processing_express
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "10000"
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: claimnexus_express
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USERNAME
+        value: neo4j
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: NEO4J_DATABASE
+        value: neo4j
+      - key: SOAP_API_KEY
+        generateValue: true
+      - key: GRAPH_RETRY_MS
+        value: "10000"

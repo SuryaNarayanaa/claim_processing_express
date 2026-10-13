@@ -86,6 +86,21 @@ async function action(button, work) {
     control.disabled = false;
   }
 }
+$("contract").onclick = () =>
+  action("contract", async () => {
+    const response = await fetch("/soap?wsdl", {
+      headers: { "X-API-Key": $("key").value },
+    });
+    if (!response.ok)
+      throw new Error("Enter the connection key to download the service contract.");
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ClaimNexus.wsdl";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    feedback("Service contract downloaded.");
+  });
 async function ledger() {
   const data = await call("ListClaims", {
     status: $("status").value,

@@ -2,6 +2,12 @@
 
 An independent JavaScript application ported from `C:\Projects\claim_processing`. Express serves the dashboard and one SOAP 1.1 service. MongoDB stores operational records; Neo4j stores their relationships. No Next.js, React, REST business endpoints, Python or Spark runtime is required.
 
+## Host on Render
+
+Use [the Render deployment guide](tools/HOSTING.md) to deploy the Docker application with a free MongoDB Atlas cluster and Neo4j AuraDB Free instance. The repository includes a Render Blueprint, generated SOAP access key, public HTTPS WSDL address and `/healthz` operational check. Business operations remain SOAP.
+
+For a walkthrough of MongoDB documents, Neo4j relationships and both XML layers, use [the Postman demo guide](tools/DEMO_GUIDE.md) and import [the Postman collection](tools/postman/ClaimNexus-SOAP.postman_collection.json).
+
 ## Run on Windows
 
 ```powershell

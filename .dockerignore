@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+node_modules
+output
+datalake
+migration-backups
+data/*.json
+test
+tools
+*.log

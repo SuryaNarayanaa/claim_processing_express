@@ -41,6 +41,8 @@ export async function connectDatabases(env = process.env) {
         neo4j.auth.basic(env.NEO4J_USERNAME || "neo4j", env.NEO4J_PASSWORD),
         { connectionTimeout: 5000, maxTransactionRetryTime: 5000 },
       );
+    if (env.NODE_ENV === "production" && graph)
+      await graph.verifyConnectivity({ database: env.NEO4J_DATABASE || "neo4j" });
     return {
       mongo,
       db,
